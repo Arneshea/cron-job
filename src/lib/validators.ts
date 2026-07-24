@@ -17,7 +17,7 @@ export const jobSchema = z.object({
   description: z.string().max(500).optional().or(z.literal("")),
   schedule: z.string().min(1, "Schedule is required").refine(
     (val) => validateCronExpression(val) === null,
-    (val) => ({ message: validateCronExpression(val) ?? "Invalid schedule" })
+    "That doesn't look like a valid cron expression (e.g. \"0 2 * * *\" for daily at 2am)."
   ),
   graceMinutes: z.coerce.number().int().min(1).max(1440),
   alertWebhookUrl: z
