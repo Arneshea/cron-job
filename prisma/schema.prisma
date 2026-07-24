@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum JobStatus {
+  HEALTHY
+  LATE
+  MISSED
+  PAUSED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  passwordHash  String
+  createdAt     DateTime  @default(now())
+  jobs          Job[]
+}
+
+model Job {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name              String
+  description       String?
+
+  // Cron expression, e.g. "0 2 * * *" (every day at 2am)
+  schedule          String
+
+  // Minutes of tolerance after the expected run time before we call it MISSED
+  graceMinutes      Int       @default(10)
+
+  // Secret token embedded in the ping URL — acts as auth for the ping endpoint
+  pingToken         String    @unique @default(cuid())
+
+  paused            Boolean   @default(false)
+  status            JobStatus @default(HEALTHY)
+
+  lastPingAt        DateTime?
+  nextExpectedAt    DateTime?
+  lastAlertedAt     DateTime?
+
+  alertWebhookUrl   String?
+  alertEmail        String?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  pings             Ping[]
+
+  @@index([userId])
+}
+
+model Ping {
+  id          String   @id @default(cuid())
+  jobId       String
+  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  receivedAt  DateTime @default(now())
+  source      String?  // optional metadata: IP, user agent, custom message
+
+  @@index([jobId, receivedAt])
+}
